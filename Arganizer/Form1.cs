@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace Arganizer
@@ -16,6 +17,11 @@ namespace Arganizer
         public string excelFileName = "";
         public string scanPath = "";
         public int currentRow = 2;
+
+        public int DIRECTORY = 1;
+        public int PREFIX = 2;
+        public int NAME = 3;
+        public int EXTENSION = 4;
 
         ExcelPackage package = new ExcelPackage();
         ExcelWorksheet worksheet;
@@ -101,18 +107,67 @@ namespace Arganizer
 
         private void InitiateScanButton_Click(object sender, EventArgs e)
         {
+            this.ScanReadyLabel.Text = "Scanning, writing results to file...";
             InitiateFolderScan(scanPath);
+            this.ScanReadyLabel.Text = "Scan complete!";
+            System.IO.FileStream fss = new System.IO.FileStream(excelFileName, System.IO.FileMode.Open);
+            package.SaveAs(fss);
+            fss.Close();
         }
 
         private void InitiateFolderScan(string currentDirectory)
         {
             foreach (string filePath in Directory.GetFiles(currentDirectory))
             {
-                //string[] splitBySlash = filePath.Split("//");
+                WriteToExcelFile(filePath);
             }
             foreach(string dir in Directory.GetDirectories(currentDirectory))
             {
                 InitiateFolderScan(dir);
+            }
+        }
+
+        public void WriteToExcelFile(string filePath)
+        {
+            try
+            {
+                string fullFileName = filePath.Split('\\').Last();
+                string[] splitExtension = fullFileName.Split('.');
+                string name = splitExtension.First();
+                string fileExtension = splitExtension.Last();
+
+                //Begin Prefix Parsing
+                string prefix = "";
+                bool removeLeading = false;
+                bool removeTrailing = false;
+                if (name.StartsWith("A ")) { prefix = "A "; removeLeading = true; }
+                else if (name.StartsWith("The ")) { prefix = "The "; removeLeading = true; }
+                else if (name.StartsWith("An ")) { prefix = "An "; removeLeading = true; }
+                else if (name.EndsWith(", A")) { prefix = ", A"; removeTrailing = true; }
+                else if (name.EndsWith(", The")) { prefix = ", The"; removeTrailing = true; }
+                else if (name.EndsWith(", An")) { prefix = ", An"; removeTrailing = true; }
+
+                if (prefix.Length > 0)
+                {
+                    int removalIndex = 0;
+                    if (removeLeading) { removalIndex = name.IndexOf(prefix); }
+                    if (removeTrailing) { removalIndex = name.LastIndexOf(prefix); }
+                    name = (removalIndex == 0 && removeLeading) || (removeTrailing)
+                        ? name.Remove(removalIndex, prefix.Length)
+                        : name;
+                }
+
+                worksheet.Cells[currentRow, DIRECTORY].Value = filePath;
+                worksheet.Cells[currentRow, PREFIX].Value = prefix;
+                worksheet.Cells[currentRow, NAME].Value = name;
+                worksheet.Cells[currentRow, EXTENSION].Value = fileExtension;
+
+                currentRow++;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("File parsing broke for file: " + filePath
+                    + "Here is the exception: "+ ex.Message);
             }
         }
     }
