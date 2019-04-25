@@ -10,32 +10,49 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
+
 namespace Arganizer
 {
     public partial class Form1 : Form
     {
-        public string excelFileName = "";
+        private System.ComponentModel.BackgroundWorker backgroundWorker1;
+
+        public string excelFilePath = "";
         public string scanPath = "";
         public int currentRow = 2;
 
-        public int DIRECTORY = 1;
-        public int PREFIX = 2;
-        public int NAME = 3;
-        public int EXTENSION = 4;
+        public int PREFIX = 1;
+        public int NAME = 2;
+        public int EXTENSION = 3;
+        public int DIRECTORY = 4;
 
         ExcelPackage package = new ExcelPackage();
-        ExcelWorksheet worksheet;
+        ExcelWorksheet worksheet = null;
 
         public Form1()
         {
             InitializeComponent();
+            InitializeBackgroundWorker();
+            this.resetButton.Font = new System.Drawing.Font(this.resetButton.Font.Name, 14F);
+            this.openFileButton.Font = new System.Drawing.Font(this.openFileButton.Font.Name, 14F);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
 
         }
-        
+
+        // Set up the BackgroundWorker object by 
+        // attaching event handlers. 
+        private void InitializeBackgroundWorker()
+        {
+            this.backgroundWorker1.DoWork +=
+                new DoWorkEventHandler(backgroundWorker1_DoWork);
+            this.backgroundWorker1.RunWorkerCompleted +=
+                new RunWorkerCompletedEventHandler(
+            this.backgroundWorker1_RunWorkerCompleted);
+        }
+
 
         private void BrowseLocationButton_Click(object sender, EventArgs e)
         {
@@ -53,34 +70,41 @@ namespace Arganizer
             // If the file name is not an empty string open it for saving.  
             if (saveFileDialog1.ShowDialog() == DialogResult.OK && saveFileDialog1.FileName != "")
             {
-                excelFileName = saveFileDialog1.FileName;
-                this.HeaderLabel.Text = excelFileName;
+                excelFilePath = saveFileDialog1.FileName;
+                this.HeaderLabel.Text = excelFilePath;
                 // Saves the Image via a FileStream created by the OpenFile method.  
-                System.IO.FileStream fs =
-                   (System.IO.FileStream)saveFileDialog1.OpenFile();
-                // NOTE that the FilterIndex property is one-based.  
-                switch (saveFileDialog1.FilterIndex)
+                try
                 {
-                    case 1:
-                    case 2:
-                        worksheet = package.Workbook.Worksheets.Add("Base Worksheet");
-                        worksheet.Cells[1, 1].Value = "Directory";
-                        worksheet.Cells[1, 2].Value = "Prefix";
-                        worksheet.Cells[1, 3].Value = "Name";
-                        worksheet.Cells[1, 4].Value = "Extension";
-                        package.SaveAs(fs);
-                        fs.Close();
-                        break;
-                }
+                    System.IO.FileStream fs = (System.IO.FileStream)saveFileDialog1.OpenFile(); //Will fail if another app is using one you're replacing
+                    // NOTE that the FilterIndex property is one-based.  
+                    switch (saveFileDialog1.FilterIndex)
+                    {
+                        case 1:
+                        case 2:
+                            worksheet = package.Workbook.Worksheets.Add("Base Worksheet");
+                            worksheet.Cells[1, 1].Value = "{Prefix}";
+                            worksheet.Cells[1, 2].Value = "{Name}";
+                            worksheet.Cells[1, 3].Value = "{Extension}";
+                            worksheet.Cells[1, 4].Value = "{Directory}";
+                            package.SaveAs(fs);
+                            fs.Close();
+                            break;
+                    }
 
-                fs.Close();
+                    fs.Close();
+                }
+                catch (System.IO.IOException ex)
+                {
+                    this.HeaderLabel.Text = ex.Message;
+                }
             }
 
-            System.IO.FileStream fss = new System.IO.FileStream(excelFileName, System.IO.FileMode.Open);
+            System.IO.FileStream fss = new System.IO.FileStream(excelFilePath, System.IO.FileMode.Open);
             fss.Close();
             this.DriveLabel.Visible = true;
             this.chooseADriveFolderButton.Visible = true;
             this.Height = 208;
+            this.resetButton.Visible = true;
         }
 
         private void chooseADriveFolderButton_Click(object sender, EventArgs e)
@@ -108,22 +132,41 @@ namespace Arganizer
         private void InitiateScanButton_Click(object sender, EventArgs e)
         {
             this.ScanReadyLabel.Text = "Scanning, writing results to file...";
+            if (this.backgroundWorker1.IsBusy != true)
+            {
+                // Start the asynchronous operation.
+                this.backgroundWorker1.RunWorkerAsync();
+            }
+        }
+
+        // This event handler is where the time-consuming work is done.
+        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker worker = sender as BackgroundWorker;
+
             InitiateFolderScan(scanPath);
-            this.ScanReadyLabel.Text = "Scan complete!";
-            System.IO.FileStream fss = new System.IO.FileStream(excelFileName, System.IO.FileMode.Open);
+            System.IO.FileStream fss = new System.IO.FileStream(excelFilePath, System.IO.FileMode.Open);
             package.SaveAs(fss);
             fss.Close();
         }
 
         private void InitiateFolderScan(string currentDirectory)
         {
-            foreach (string filePath in Directory.GetFiles(currentDirectory))
+            string[] files = new string[0];
+            //Ensure we have permission to access this directories contents
+            try { files = Directory.GetFiles(currentDirectory); }
+            catch { /* Ignoring... */ } //This catches all errors, access denied exceptions, etc.
+
+            if (files.Length > 0)
             {
-                WriteToExcelFile(filePath);
-            }
-            foreach(string dir in Directory.GetDirectories(currentDirectory))
-            {
-                InitiateFolderScan(dir);
+                foreach (string filePath in Directory.GetFiles(currentDirectory))
+                {
+                    WriteToExcelFile(filePath);
+                }
+                foreach (string dir in Directory.GetDirectories(currentDirectory))
+                {
+                    InitiateFolderScan(dir);
+                }
             }
         }
 
@@ -167,8 +210,48 @@ namespace Arganizer
             catch (Exception ex)
             {
                 throw new Exception("File parsing broke for file: " + filePath
-                    + "Here is the exception: "+ ex.Message);
+                    + "Here is the exception: " + ex.Message);
             }
+        }
+
+        // This event handler deals with the results of the background operation.
+        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Error != null)
+            {
+                this.ScanReadyLabel.Text = "Error: " + e.Error.Message;
+            }
+            else
+            {
+                this.ScanReadyLabel.Text = "Scan complete!";
+                this.openFileButton.Visible = true;
+            }
+        }
+
+        private void resetButton_Click(object sender, EventArgs e)
+        {
+            this.excelFilePath = "";
+            this.scanPath = "";
+            this.currentRow = 2;
+            package = new ExcelPackage();
+            worksheet = null;
+
+            this.Height = 118;
+
+            this.HeaderLabel.Text = "Welcome! Please choose a location and name for your Excel File:";
+            this.DriveLabel.Text = "Excel file has been created. Please choose a drive/folder to scan:";
+            this.ScanReadyLabel.Text = "Ready to scan!";
+
+            this.DriveLabel.Visible = false;
+            this.ScanReadyLabel.Visible = false;
+            this.chooseADriveFolderButton.Visible = false;
+            this.InitiateScanButton.Visible = false;
+            this.openFileButton.Visible = false;
+        }
+
+        private void openFileButton_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start(excelFilePath);
         }
     }
 }

@@ -35,6 +35,9 @@
             this.chooseADriveFolderButton = new System.Windows.Forms.Button();
             this.ScanReadyLabel = new System.Windows.Forms.Label();
             this.InitiateScanButton = new System.Windows.Forms.Button();
+            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
+            this.resetButton = new System.Windows.Forms.Button();
+            this.openFileButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // HeaderLabel
@@ -89,7 +92,7 @@
             // 
             // InitiateScanButton
             // 
-            this.InitiateScanButton.Location = new System.Drawing.Point(97, 207);
+            this.InitiateScanButton.Location = new System.Drawing.Point(97, 202);
             this.InitiateScanButton.Name = "InitiateScanButton";
             this.InitiateScanButton.Size = new System.Drawing.Size(113, 32);
             this.InitiateScanButton.TabIndex = 8;
@@ -98,12 +101,36 @@
             this.InitiateScanButton.Visible = false;
             this.InitiateScanButton.Click += new System.EventHandler(this.InitiateScanButton_Click);
             // 
+            // resetButton
+            // 
+            this.resetButton.Location = new System.Drawing.Point(216, 36);
+            this.resetButton.Name = "resetButton";
+            this.resetButton.Size = new System.Drawing.Size(30, 29);
+            this.resetButton.TabIndex = 9;
+            this.resetButton.Text = "↰ ";
+            this.resetButton.UseVisualStyleBackColor = true;
+            this.resetButton.Visible = false;
+            this.resetButton.Click += new System.EventHandler(this.resetButton_Click);
+            // 
+            // openFileButton
+            // 
+            this.openFileButton.Location = new System.Drawing.Point(216, 202);
+            this.openFileButton.Name = "openFileButton";
+            this.openFileButton.Size = new System.Drawing.Size(30, 32);
+            this.openFileButton.TabIndex = 10;
+            this.openFileButton.Text = "⌕";
+            this.openFileButton.UseVisualStyleBackColor = true;
+            this.openFileButton.Visible = false;
+            this.openFileButton.Click += new System.EventHandler(this.openFileButton_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(338, 263);
+            this.ClientSize = new System.Drawing.Size(338, 83);
+            this.Controls.Add(this.openFileButton);
+            this.Controls.Add(this.resetButton);
             this.Controls.Add(this.InitiateScanButton);
             this.Controls.Add(this.ScanReadyLabel);
             this.Controls.Add(this.chooseADriveFolderButton);
@@ -127,6 +154,8 @@
         private System.Windows.Forms.Button chooseADriveFolderButton;
         private System.Windows.Forms.Label ScanReadyLabel;
         private System.Windows.Forms.Button InitiateScanButton;
+        private System.Windows.Forms.Button resetButton;
+        private System.Windows.Forms.Button openFileButton;
     }
 }
 
