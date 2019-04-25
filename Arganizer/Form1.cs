@@ -99,12 +99,15 @@ namespace Arganizer
                 }
             }
 
-            System.IO.FileStream fss = new System.IO.FileStream(excelFilePath, System.IO.FileMode.Open);
-            fss.Close();
-            this.DriveLabel.Visible = true;
-            this.chooseADriveFolderButton.Visible = true;
-            this.Height = 208;
-            this.resetButton.Visible = true;
+            if(!string.IsNullOrEmpty(excelFilePath))
+            {
+                System.IO.FileStream fss = new System.IO.FileStream(excelFilePath, System.IO.FileMode.Open);
+                fss.Close();
+                this.DriveLabel.Visible = true;
+                this.chooseADriveFolderButton.Visible = true;
+                this.Height = 208;
+                this.resetButton.Visible = true;
+            }
         }
 
         private void chooseADriveFolderButton_Click(object sender, EventArgs e)
