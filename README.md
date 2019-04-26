@@ -1,7 +1,7 @@
 # Arganizer
  For taking inventory of your loot
 
- This is a simple scrapper that recursively scans a folder/drive of your choice, and outputs that data to an excel file also of your choice.
+ This is a simple scraper that recursively scans a folder/drive of your choice, and outputs that data to an excel file also of your choice.
  It doesn't actually organize anything like the name implies--just couldn't resist a pun.
 
  The 'prefix' column in your excel output captures leading 'A', 'An', 'The', and trailing ', A' ', An' and ', The' off of filenames.
