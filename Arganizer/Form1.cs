@@ -266,7 +266,7 @@ namespace Arganizer
             this.InitiateScanButton.Visible = false;
             this.openFileButton.Visible = false;
             this.scanDirectoriesOnly.Visible = false;
-
+            this.scanDirectoriesOnly.Checked = false;
             DirectoryScan = false;
         }
 
