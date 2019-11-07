@@ -21,10 +21,12 @@ namespace Arganizer
         public string scanPath = "";
         public int currentRow = 2;
 
-        public int PREFIX = 1;
-        public int NAME = 2;
-        public int EXTENSION = 3;
-        public int DIRECTORY = 4;
+        public bool DirectoryScan = false;
+
+        public enum Columns : int
+        {
+            Prefix = 1, Name, Extension, Directory
+        };
 
         ExcelPackage package = new ExcelPackage();
         ExcelWorksheet worksheet = null;
@@ -127,7 +129,8 @@ namespace Arganizer
 
                     this.ScanReadyLabel.Visible = true;
                     this.InitiateScanButton.Visible = true;
-                    this.Height = 300;
+                    this.scanDirectoriesOnly.Visible = true;
+                    this.Height = 310;
                 }
             }
         }
@@ -156,20 +159,29 @@ namespace Arganizer
         private void InitiateFolderScan(string currentDirectory)
         {
             string[] files = new string[0];
-            //Ensure we have permission to access this directories contents
-            try { files = Directory.GetFiles(currentDirectory); }
-            catch { /* Ignoring... */ } //This catches all errors, access denied exceptions, etc.
 
-            if (files.Length > 0)
+            if (DirectoryScan)
             {
-                foreach (string filePath in Directory.GetFiles(currentDirectory))
+                WriteToExcelFile(currentDirectory);
+            }
+            else
+            {
+                //Ensure we have permission to access this directories contents
+                try { files = Directory.GetFiles(currentDirectory); }
+                catch { /* Ignoring... */ } //This catches all errors, access denied exceptions, etc.
+
+                if (files.Length > 0)
                 {
-                    WriteToExcelFile(filePath);
+                    foreach (string filePath in Directory.GetFiles(currentDirectory))
+                    {
+                        WriteToExcelFile(filePath);
+                    }
                 }
-                foreach (string dir in Directory.GetDirectories(currentDirectory))
-                {
-                    InitiateFolderScan(dir);
-                }
+            }
+
+            foreach (string dir in Directory.GetDirectories(currentDirectory))
+            {
+                InitiateFolderScan(dir);
             }
         }
 
@@ -177,37 +189,40 @@ namespace Arganizer
         {
             try
             {
-                string fullFileName = filePath.Split('\\').Last();
-                string[] splitExtension = fullFileName.Split('.');
-                string name = splitExtension.First();
-                string fileExtension = splitExtension.Last();
+                worksheet.Cells[currentRow, (int)Columns.Directory].Value = filePath;
 
-                //Begin Prefix Parsing
-                string prefix = "";
-                bool removeLeading = false;
-                bool removeTrailing = false;
-                if (name.StartsWith("A ")) { prefix = "A "; removeLeading = true; }
-                else if (name.StartsWith("The ")) { prefix = "The "; removeLeading = true; }
-                else if (name.StartsWith("An ")) { prefix = "An "; removeLeading = true; }
-                else if (name.EndsWith(", A")) { prefix = ", A"; removeTrailing = true; }
-                else if (name.EndsWith(", The")) { prefix = ", The"; removeTrailing = true; }
-                else if (name.EndsWith(", An")) { prefix = ", An"; removeTrailing = true; }
-
-                if (prefix.Length > 0)
+                if (!DirectoryScan)
                 {
-                    int removalIndex = 0;
-                    if (removeLeading) { removalIndex = name.IndexOf(prefix); }
-                    if (removeTrailing) { removalIndex = name.LastIndexOf(prefix); }
-                    name = (removalIndex == 0 && removeLeading) || (removeTrailing)
-                        ? name.Remove(removalIndex, prefix.Length)
-                        : name;
+                    string fullFileName = filePath.Split('\\').Last();
+                    string[] splitExtension = fullFileName.Split('.');
+                    string name = splitExtension.First();
+                    string fileExtension = splitExtension.Last();
+
+                    //Begin Prefix Parsing
+                    string prefix = "";
+                    bool removeLeading = false;
+                    bool removeTrailing = false;
+                    if (name.StartsWith("A ")) { prefix = "A "; removeLeading = true; }
+                    else if (name.StartsWith("The ")) { prefix = "The "; removeLeading = true; }
+                    else if (name.StartsWith("An ")) { prefix = "An "; removeLeading = true; }
+                    else if (name.EndsWith(", A")) { prefix = ", A"; removeTrailing = true; }
+                    else if (name.EndsWith(", The")) { prefix = ", The"; removeTrailing = true; }
+                    else if (name.EndsWith(", An")) { prefix = ", An"; removeTrailing = true; }
+
+                    if (prefix.Length > 0)
+                    {
+                        int removalIndex = 0;
+                        if (removeLeading) { removalIndex = name.IndexOf(prefix); }
+                        if (removeTrailing) { removalIndex = name.LastIndexOf(prefix); }
+                        name = (removalIndex == 0 && removeLeading) || (removeTrailing)
+                            ? name.Remove(removalIndex, prefix.Length)
+                            : name;
+                    }
+
+                    worksheet.Cells[currentRow, (int)Columns.Prefix].Value = prefix;
+                    worksheet.Cells[currentRow, (int)Columns.Name].Value = name;
+                    worksheet.Cells[currentRow, (int)Columns.Extension].Value = fileExtension;
                 }
-
-                worksheet.Cells[currentRow, DIRECTORY].Value = filePath;
-                worksheet.Cells[currentRow, PREFIX].Value = prefix;
-                worksheet.Cells[currentRow, NAME].Value = name;
-                worksheet.Cells[currentRow, EXTENSION].Value = fileExtension;
-
                 currentRow++;
             }
             catch (Exception ex)
@@ -250,11 +265,19 @@ namespace Arganizer
             this.chooseADriveFolderButton.Visible = false;
             this.InitiateScanButton.Visible = false;
             this.openFileButton.Visible = false;
+            this.scanDirectoriesOnly.Visible = false;
+
+            DirectoryScan = false;
         }
 
         private void openFileButton_Click(object sender, EventArgs e)
         {
             System.Diagnostics.Process.Start(excelFilePath);
+        }
+
+        private void CheckBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            DirectoryScan = scanDirectoriesOnly.Checked;
         }
     }
 }
